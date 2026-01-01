@@ -21,7 +21,7 @@ from app.core.common.config import (
 )
 from app.core.common.logging import logger
 from app.models.session import Session as ChatSession
-from app.models.user import User
+from app.core.user.user import User
 
 
 class DatabaseService:

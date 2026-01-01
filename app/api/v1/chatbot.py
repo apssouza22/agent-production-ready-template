@@ -21,8 +21,8 @@ from app.core.agentic.agent_example import AgentExample
 from app.core.agentic.tools import tools
 from app.core.common.config import settings
 from app.core.common.logging import logger
-from app.core.common.checkpointer import clear_checkpoints
-from app.core.common.checkpointer import get_checkpointer
+from app.core.checkpoint.checkpointer import clear_checkpoints
+from app.core.checkpoint.checkpointer import get_checkpointer
 from app.core.llm.llm import llm_service
 from app.models.session import Session
 from app.schemas.chat import (

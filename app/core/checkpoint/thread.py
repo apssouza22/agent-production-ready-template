@@ -12,7 +12,7 @@ from sqlmodel import (
 
 
 class Thread(SQLModel, table=True):
-    """Thread model for storing conversation threads.
+    """Thread model for storing conversation threads. Used by LangGraph for checkpointing.
 
     Attributes:
         id: The primary key

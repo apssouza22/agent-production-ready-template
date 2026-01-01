@@ -2,7 +2,6 @@
 
 from typing import (
     TYPE_CHECKING,
-    List,
 )
 
 from sqlmodel import (
@@ -13,7 +12,7 @@ from sqlmodel import (
 from app.models.base import BaseModel
 
 if TYPE_CHECKING:
-    from app.models.user import User
+    from app.core.user.user import User
 
 
 class Session(BaseModel, table=True):

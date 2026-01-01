@@ -26,7 +26,7 @@ from app.core.common.logging import (
     logger,
 )
 from app.models.session import Session
-from app.models.user import User
+from app.core.user.user import User
 from app.schemas.auth import (
     SessionResponse,
     TokenResponse,
