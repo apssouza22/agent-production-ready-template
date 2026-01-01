@@ -26,7 +26,7 @@ staging:
 
 dev:
 	@echo "Starting server in development environment"
-	@bash -c "source scripts/set_env.sh development && uv run uvicorn src.main:app --reload --port 8000 --loop uvloop"
+	@bash -c "source scripts/set_env.sh development && uv run uvicorn app.main:app --reload --port 8000 --loop uvloop"
 
 # Evaluation commands
 eval:
