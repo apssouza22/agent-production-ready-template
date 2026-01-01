@@ -16,7 +16,7 @@ from jose import (
 from src.core.config import settings
 from src.core.logging import logger
 from src.schemas.auth import Token
-from src.utils.sanitization import sanitize_string
+from src.api.v1.sanitization import sanitize_string
 
 
 def create_access_token(thread_id: str, expires_delta: Optional[timedelta] = None) -> Token:

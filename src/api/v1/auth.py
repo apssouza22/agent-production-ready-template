@@ -34,11 +34,11 @@ from src.schemas.auth import (
     UserResponse,
 )
 from src.services.database import DatabaseService
-from src.utils.auth import (
+from src.api.security.auth import (
     create_access_token,
     verify_token,
 )
-from src.utils.sanitization import (
+from src.api.v1.sanitization import (
     sanitize_email,
     sanitize_string,
     validate_password_strength,
