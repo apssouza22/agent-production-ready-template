@@ -3,7 +3,7 @@
 This module provides functions for managing long-term memory operations including
 initialization, search, and updates using the mem0 library with PostgreSQL/pgvector backend.
 """
-
+import asyncio
 from typing import Optional
 
 from langchain_core.messages import convert_to_openai_messages
@@ -86,3 +86,16 @@ async def update_memory(user_id: str, messages: list[dict], metadata: dict = Non
             user_id=user_id,
             error=str(e),
         )
+
+async def bg_update_memory(user_id: str, messages: list[dict], metadata: dict = None) -> None:
+    """Run memory update in background without blocking the response
+
+    Args:
+        user_id: The user ID to update memory for.
+        messages: The messages to add to memory.
+        metadata: Optional metadata to include with the memory update.
+    """
+    asyncio.create_task(
+        update_memory(user_id, messages, metadata)
+    )
+

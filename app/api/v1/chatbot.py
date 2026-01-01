@@ -14,12 +14,16 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 
-from app.api.v1.auth import get_current_session
-from app.core.common.config import settings
-from app.core.langgraph.graph import LangGraphAgent
-from app.api.security.limiter import limiter
-from app.core.common.logging import logger
 from app.api.metrics.http_metrics import llm_stream_duration_seconds
+from app.api.security.limiter import limiter
+from app.api.v1.auth import get_current_session
+from app.core.agentic.agent_example import AgentExample
+from app.core.agentic.tools import tools
+from app.core.common.config import settings
+from app.core.common.logging import logger
+from app.core.langgraph.checkpointer import clear_checkpoints
+from app.core.langgraph.checkpointer import get_checkpointer
+from app.core.llm.llm import llm_service
 from app.models.session import Session
 from app.schemas.chat import (
     ChatRequest,
@@ -28,7 +32,11 @@ from app.schemas.chat import (
 )
 
 router = APIRouter()
-agent = LangGraphAgent()
+
+async def get_agent_example() -> AgentExample:
+    return AgentExample("Agent Example", llm_service, tools, await get_checkpointer())
+
+
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -57,8 +65,8 @@ async def chat(
             session_id=session.id,
             message_count=len(chat_request.messages),
         )
-
-        result = await agent.get_response(chat_request.messages, session.id, user_id=session.user_id)
+        agent = await get_agent_example()
+        result = await agent.agent_invoke(chat_request.messages, session.id, user_id=session.user_id)
 
         logger.info("chat_request_processed", session_id=session.id)
 
@@ -89,6 +97,7 @@ async def chat_stream(
         HTTPException: If there's an error processing the request.
     """
     try:
+        agent = get_agent_example()
         logger.info(
             "stream_chat_request_received",
             session_id=session.id,
@@ -159,6 +168,7 @@ async def get_session_messages(
         HTTPException: If there's an error retrieving the messages.
     """
     try:
+        agent = await get_agent_example()
         messages = await agent.get_chat_history(session.id)
         return ChatResponse(messages=messages)
     except Exception as e:
@@ -182,7 +192,7 @@ async def clear_chat_history(
         dict: A message indicating the chat history was cleared.
     """
     try:
-        await agent.clear_chat_history(session.id)
+        await clear_checkpoints(session.id)
         return {"message": "Chat history cleared successfully"}
     except Exception as e:
         logger.error("clear_chat_history_failed", session_id=session.id, error=str(e), exc_info=True)
