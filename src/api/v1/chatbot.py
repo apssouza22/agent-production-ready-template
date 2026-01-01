@@ -5,7 +5,6 @@ streaming chat, message history management, and chat history clearing.
 """
 
 import json
-from typing import List
 
 from fastapi import (
     APIRouter,
@@ -20,12 +19,11 @@ from src.core.config import settings
 from src.core.langgraph.graph import LangGraphAgent
 from src.api.security.limiter import limiter
 from src.core.logging import logger
-from src.core.metrics import llm_stream_duration_seconds
+from src.api.metrics.http_metrics import llm_stream_duration_seconds
 from src.models.session import Session
 from src.schemas.chat import (
     ChatRequest,
     ChatResponse,
-    Message,
     StreamResponse,
 )
 

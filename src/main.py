@@ -18,6 +18,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from langfuse import Langfuse
+
+from src.api.metrics.middleware import MetricsMiddleware
+from src.api.logging_context import LoggingContextMiddleware
 from src.api.v1.api import api_router
 from src.core.config import settings
 from src.api.security.limiter import (
@@ -25,11 +28,7 @@ from src.api.security.limiter import (
     setup_rate_limit,
 )
 from src.core.logging import logger
-from src.core.metrics import setup_metrics
-from src.api.middleware import (
-    LoggingContextMiddleware,
-    MetricsMiddleware,
-)
+from src.api.metrics.http_metrics import setup_metrics
 from src.services.database import database_service
 
 # Load environment variables

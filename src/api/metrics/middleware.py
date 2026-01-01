@@ -7,7 +7,7 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from src.core.metrics import (
+from src.api.metrics.http_metrics import (
     http_request_duration_seconds,
     http_requests_total,
 )

@@ -30,13 +30,13 @@ from langgraph.types import (
 from mem0 import AsyncMemory
 from psycopg_pool import AsyncConnectionPool
 
+from src.core.metrics import llm_inference_duration_seconds
 from src.core.config import (
     Environment,
     settings,
 )
 from src.core.langgraph.tools import tools
 from src.core.logging import logger
-from src.core.metrics import llm_inference_duration_seconds
 from src.core.prompts import load_system_prompt
 from src.schemas import (
     GraphState,
