@@ -20,5 +20,6 @@ wheels/
 *.ipynb
 
 # Reports
-evals/reports/
+src/eval/reports/
 /.idea/
+/.claude/settings.local.json
