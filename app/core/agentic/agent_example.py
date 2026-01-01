@@ -13,8 +13,8 @@ from app.core.agentic.prompts import load_system_prompt
 from app.core.common.config import settings
 from app.core.common.logging import logger
 from app.core.common.metrics import llm_inference_duration_seconds
-from app.core.langgraph.graph_utils import process_messages
-from app.core.langgraph.memory import get_relevant_memory, bg_update_memory
+from app.core.common.graph_utils import process_messages
+from app.core.memory.memory import get_relevant_memory, bg_update_memory
 from app.core.llm.llm_utils import dump_messages, prepare_messages, process_llm_response
 from app.schemas import GraphState
 from app.schemas import Message
