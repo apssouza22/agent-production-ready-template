@@ -25,13 +25,12 @@ from app.core.common.logging import (
     bind_context,
     logger,
 )
-from app.models.session import Session
+from app.core.common.token_dtos import TokenResponse
+from app.core.session.session_model import Session
+from app.core.user.user_dtos import UserResponse, UserCreate
 from app.core.user.user_model import User
-from app.schemas.auth import (
+from app.core.session.session_dto import (
     SessionResponse,
-    TokenResponse,
-    UserCreate,
-    UserResponse,
 )
 from app.services.database import DatabaseService
 from app.api.security.auth import (
@@ -132,7 +131,8 @@ async def get_current_session(
         session_id = sanitize_string(session_id)
 
         # Verify session exists in database
-        session = await db_service.get_session(session_id)
+        session_repo = db_service.get_session_repository()
+        session = await session_repo.get_session(session_id)
         if session is None:
             logger.error("session_not_found", session_id=session_id)
             raise HTTPException(
@@ -256,7 +256,8 @@ async def create_session(user: User = Depends(get_current_user)):
         session_id = str(uuid.uuid4())
 
         # Create session in database
-        session = await db_service.create_session(session_id, user.id)
+        session_repo = db_service.get_session_repository()
+        session = await session_repo.create_session(session_id, user.id)
 
         # Create access token for the session
         token = create_access_token(session_id)
@@ -300,7 +301,8 @@ async def update_session_name(
             raise HTTPException(status_code=403, detail="Cannot modify other sessions")
 
         # Update the session name
-        session = await db_service.update_session_name(sanitized_session_id, sanitized_name)
+        session_repo = db_service.get_session_repository()
+        session = await session_repo.update_session_name(sanitized_session_id, sanitized_name)
 
         # Create a new token (not strictly necessary but maintains consistency)
         token = create_access_token(sanitized_session_id)
@@ -332,7 +334,8 @@ async def delete_session(session_id: str, current_session: Session = Depends(get
             raise HTTPException(status_code=403, detail="Cannot delete other sessions")
 
         # Delete the session
-        await db_service.delete_session(sanitized_session_id)
+        session_repo = db_service.get_session_repository()
+        await session_repo.delete_session(sanitized_session_id)
 
         logger.info("session_deleted", session_id=session_id, user_id=current_session.user_id)
     except ValueError as ve:
@@ -351,7 +354,8 @@ async def get_user_sessions(user: User = Depends(get_current_user)):
         List[SessionResponse]: List of session IDs
     """
     try:
-        sessions = await db_service.get_user_sessions(user.id)
+        session_repo = db_service.get_session_repository()
+        sessions = await session_repo.get_user_sessions(user.id)
         return [
             SessionResponse(
                 session_id=sanitize_string(session.id),

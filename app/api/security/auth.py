@@ -15,7 +15,7 @@ from jose import (
 
 from app.core.common.config import settings
 from app.core.common.logging import logger
-from app.schemas.auth import Token
+from app.core.common.token_dtos import Token
 from app.api.v1.sanitization import sanitize_string
 
 

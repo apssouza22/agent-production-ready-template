@@ -24,7 +24,7 @@ from app.core.common.logging import logger
 from app.core.checkpoint.checkpointer import clear_checkpoints
 from app.core.checkpoint.checkpointer import get_checkpointer
 from app.core.llm.llm import llm_service
-from app.models.session import Session
+from app.core.session.session_model import Session
 from app.schemas.chat import (
     ChatRequest,
     ChatResponse,
