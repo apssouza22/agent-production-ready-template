@@ -26,7 +26,7 @@ from src.core.config import settings
 from src.core.limiter import limiter
 from src.core.logging import logger
 from src.core.metrics import setup_metrics
-from src.core.middleware import (
+from src.api.middleware import (
     LoggingContextMiddleware,
     MetricsMiddleware,
 )
