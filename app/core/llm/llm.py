@@ -24,11 +24,11 @@ from tenacity import (
     wait_exponential,
 )
 
-from app.core.config import (
+from app.core.common.config import (
     Environment,
     settings,
 )
-from app.core.logging import logger
+from app.core.common.logging import logger
 
 
 class LLMRegistry:

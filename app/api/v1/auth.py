@@ -19,9 +19,9 @@ from fastapi.security import (
     HTTPBearer,
 )
 
-from app.core.config import settings
+from app.core.common.config import settings
 from app.api.security.limiter import limiter
-from app.core.logging import (
+from app.core.common.logging import (
     bind_context,
     logger,
 )

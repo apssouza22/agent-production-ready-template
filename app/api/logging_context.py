@@ -10,8 +10,8 @@ from jose import (
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from app.core.config import settings
-from app.core.logging import (
+from app.core.common.config import settings
+from app.core.common.logging import (
     bind_context,
     clear_context,
 )

@@ -13,7 +13,7 @@ from typing import (
 
 from langfuse.api.resources.commons.types.trace_with_details import TraceWithDetails
 
-from app.core.logging import logger
+from app.core.common.logging import logger
 from evals.schemas import ScoreSchema
 
 

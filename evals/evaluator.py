@@ -12,8 +12,8 @@ from langfuse import Langfuse
 from langfuse.api.resources.commons.types.trace_with_details import TraceWithDetails
 from tqdm import tqdm
 
-from app.core.config import settings
-from app.core.logging import logger
+from app.core.common.config import settings
+from app.core.common.logging import logger
 from evals.helpers import (
     calculate_avg_scores,
     generate_report,

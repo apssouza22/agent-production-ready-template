@@ -22,12 +22,12 @@ from langfuse import Langfuse
 from app.api.metrics.middleware import MetricsMiddleware
 from app.api.logging_context import LoggingContextMiddleware
 from app.api.v1.api import api_router
-from app.core.config import settings
+from app.core.common.config import settings
 from app.api.security.limiter import (
     limiter,
     setup_rate_limit,
 )
-from app.core.logging import logger
+from app.core.common.logging import logger
 from app.api.metrics.http_metrics import setup_metrics
 from app.services.database import database_service
 

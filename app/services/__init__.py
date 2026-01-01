@@ -1,7 +1,7 @@
 """This file contains the services for the application."""
 
 from app.services.database import database_service
-from app.services.llm import (
+from app.core.llm.llm import (
     LLMRegistry,
     llm_service,
 )

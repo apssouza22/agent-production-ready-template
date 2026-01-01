@@ -15,12 +15,11 @@ from typing import (
     Any,
     Dict,
     List,
-    Optional,
 )
 
 import structlog
 
-from app.core.config import (
+from app.core.common.config import (
     Environment,
     settings,
 )

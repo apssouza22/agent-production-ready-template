@@ -16,8 +16,8 @@ from colorama import (
     Style,
 )
 
-from app.core.config import settings
-from app.core.logging import logger
+from app.core.common.config import settings
+from app.core.common.logging import logger
 from evals.evaluator import Evaluator
 
 # Default configuration
