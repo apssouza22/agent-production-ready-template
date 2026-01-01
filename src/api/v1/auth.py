@@ -20,7 +20,7 @@ from fastapi.security import (
 )
 
 from src.core.config import settings
-from src.core.limiter import limiter
+from src.api.security.limiter import limiter
 from src.core.logging import (
     bind_context,
     logger,

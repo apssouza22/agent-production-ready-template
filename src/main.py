@@ -18,12 +18,12 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from langfuse import Langfuse
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-
 from src.api.v1.api import api_router
 from src.core.config import settings
-from src.core.limiter import limiter
+from src.api.security.limiter import (
+    limiter,
+    setup_rate_limit,
+)
 from src.core.logging import logger
 from src.core.metrics import setup_metrics
 from src.api.middleware import (
@@ -67,15 +67,14 @@ app = FastAPI(
 # Set up Prometheus metrics
 setup_metrics(app)
 
+# Set up rate limiter exception handler
+setup_rate_limit(app)
+
 # Add logging context middleware (must be added before other middleware to capture context)
 app.add_middleware(LoggingContextMiddleware)
 
 # Add custom metrics middleware
 app.add_middleware(MetricsMiddleware)
-
-# Set up rate limiter exception handler
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 # Add validation exception handler
