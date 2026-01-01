@@ -26,7 +26,7 @@ from app.core.common.logging import (
     logger,
 )
 from app.models.session import Session
-from app.core.user.user import User
+from app.core.user.user_model import User
 from app.schemas.auth import (
     SessionResponse,
     TokenResponse,
@@ -78,7 +78,8 @@ async def get_current_user(
 
         # Verify user exists in database
         user_id_int = int(user_id)
-        user = await db_service.get_user(user_id_int)
+        user_repo = db_service.get_user_repository()
+        user = await user_repo.get_user(user_id_int)
         if user is None:
             logger.error("user_not_found", user_id=user_id_int)
             raise HTTPException(
@@ -173,12 +174,15 @@ async def register_user(request: Request, user_data: UserCreate):
         password = user_data.password.get_secret_value()
         validate_password_strength(password)
 
+        # Get user repository
+        user_repo = db_service.get_user_repository()
+
         # Check if user exists
-        if await db_service.get_user_by_email(sanitized_email):
+        if await user_repo.get_user_by_email(sanitized_email):
             raise HTTPException(status_code=400, detail="Email already registered")
 
         # Create user
-        user = await db_service.create_user(email=sanitized_email, password=User.hash_password(password))
+        user = await user_repo.create_user(email=sanitized_email, password=User.hash_password(password))
 
         # Create access token
         token = create_access_token(str(user.id))
@@ -221,7 +225,8 @@ async def login(
                 detail="Unsupported grant type. Must be 'password'",
             )
 
-        user = await db_service.get_user_by_email(username)
+        user_repo = db_service.get_user_repository()
+        user = await user_repo.get_user_by_email(username)
         if not user or not user.verify_password(password):
             raise HTTPException(
                 status_code=401,

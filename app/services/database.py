@@ -21,13 +21,14 @@ from app.core.common.config import (
 )
 from app.core.common.logging import logger
 from app.models.session import Session as ChatSession
-from app.core.user.user import User
+from app.core.user import UserRepository
 
 
 class DatabaseService:
     """Service class for database operations.
 
-    This class handles all database operations for Users, Sessions, and Messages.
+    This class handles all database operations for Sessions and Messages.
+    User operations are handled by UserRepository.
     It uses SQLModel for ORM operations and maintains a connection pool.
     """
 
@@ -69,69 +70,13 @@ class DatabaseService:
             if settings.ENVIRONMENT != Environment.PRODUCTION:
                 raise
 
-    async def create_user(self, email: str, password: str) -> User:
-        """Create a new user.
-
-        Args:
-            email: User's email address
-            password: Hashed password
+    def get_user_repository(self) -> UserRepository:
+        """Get a user repository instance.
 
         Returns:
-            User: The created user
+            UserRepository: A user repository instance with a new session
         """
-        with Session(self.engine) as session:
-            user = User(email=email, hashed_password=password)
-            session.add(user)
-            session.commit()
-            session.refresh(user)
-            logger.info("user_created", email=email)
-            return user
-
-    async def get_user(self, user_id: int) -> Optional[User]:
-        """Get a user by ID.
-
-        Args:
-            user_id: The ID of the user to retrieve
-
-        Returns:
-            Optional[User]: The user if found, None otherwise
-        """
-        with Session(self.engine) as session:
-            user = session.get(User, user_id)
-            return user
-
-    async def get_user_by_email(self, email: str) -> Optional[User]:
-        """Get a user by email.
-
-        Args:
-            email: The email of the user to retrieve
-
-        Returns:
-            Optional[User]: The user if found, None otherwise
-        """
-        with Session(self.engine) as session:
-            statement = select(User).where(User.email == email)
-            user = session.exec(statement).first()
-            return user
-
-    async def delete_user_by_email(self, email: str) -> bool:
-        """Delete a user by email.
-
-        Args:
-            email: The email of the user to delete
-
-        Returns:
-            bool: True if deletion was successful, False if user not found
-        """
-        with Session(self.engine) as session:
-            user = session.exec(select(User).where(User.email == email)).first()
-            if not user:
-                return False
-
-            session.delete(user)
-            session.commit()
-            logger.info("user_deleted", email=email)
-            return True
+        return UserRepository(Session(self.engine))
 
     async def create_session(self, session_id: str, user_id: int, name: str = "") -> ChatSession:
         """Create a new chat session.
