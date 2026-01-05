@@ -38,7 +38,7 @@ from app.core.langgraph.tools import tools
 from app.core.logging import logger
 from app.core.metrics import llm_inference_duration_seconds
 from app.core.prompts import load_system_prompt
-from app.mcp.dependencies import get_mcp_dependencies
+from app.mcp.dependencies import get_mcp_session_manager
 from app.schemas import (
     GraphState,
     Message,
@@ -74,11 +74,27 @@ class LangGraphAgent:
         )
 
     async def load_tools(self):
-        async with get_mcp_dependencies() as resource:
-            logger.info("mcp_tools_loaded", tool_count=len(resource.tools))
-            all_tools = resource.tools + tools
-            self.llm_service.bind_tools(tools)
-            self.tools_by_name = {tool.name: tool for tool in all_tools}
+        """Load tools from persistent MCP sessions and built-in tools."""
+        mcp_tools = []
+
+        # Try to load MCP tools from persistent sessions
+        if settings.MCP_ENABLED:
+            try:
+                mcp_manager = get_mcp_session_manager()
+                resource = mcp_manager.get_resource()
+                mcp_tools = resource.tools
+                logger.info("mcp_tools_loaded", tool_count=len(mcp_tools))
+            except RuntimeError as e:
+                logger.warning("mcp_not_initialized", error=str(e))
+            except Exception as e:
+                logger.error("mcp_tools_load_failed", error=str(e))
+
+        # Combine MCP tools with built-in tools
+        all_tools = mcp_tools + tools
+        self.llm_service.bind_tools(all_tools)
+        self.tools_by_name = {tool.name: tool for tool in all_tools}
+
+        logger.info("tools_loaded", total_count=len(all_tools), mcp_count=len(mcp_tools), builtin_count=len(tools))
 
     async def _long_term_memory(self) -> AsyncMemory:
         """Initialize the long term memory."""
@@ -246,15 +262,71 @@ class LangGraphAgent:
             Command: Command object with updated messages and routing back to chat.
         """
         outputs = []
-        for tool_call in state.messages[-1].tool_calls:
-            tool_result = await self.tools_by_name[tool_call["name"]].ainvoke(tool_call["args"])
-            outputs.append(
-                ToolMessage(
-                    content=tool_result,
-                    name=tool_call["name"],
-                    tool_call_id=tool_call["id"],
-                )
-            )
+        try:
+            for tool_call in state.messages[-1].tool_calls:
+                tool_name = tool_call["name"]
+                max_retries = 1  # One reconnection attempt
+
+                for attempt in range(max_retries + 1):
+                    try:
+                        tool_result = await self.tools_by_name[tool_name].ainvoke(tool_call["args"])
+                        outputs.append(
+                            ToolMessage(
+                                content=tool_result,
+                                name=tool_name,
+                                tool_call_id=tool_call["id"],
+                            )
+                        )
+                        break  # Success, exit retry loop
+
+                    except Exception as tool_error:
+                        error_type = type(tool_error).__name__
+
+                        # Check if it's a ClosedResourceError and we can retry
+                        if "ClosedResourceError" in error_type and attempt < max_retries:
+                            logger.warning("mcp_connection_closed_retrying",
+                                         tool_name=tool_name,
+                                         attempt=attempt + 1,
+                                         error=str(tool_error))
+
+                            # Attempt to reconnect MCP sessions
+                            try:
+                                mcp_manager = get_mcp_session_manager()
+                                reconnected = await mcp_manager.reconnect()
+                                if reconnected:
+                                    # Reload tools with new sessions
+                                    await self.load_tools()
+                                    logger.info("mcp_reconnected_retrying_tool")
+                                    continue  # Retry the tool call
+                            except Exception as reconnect_error:
+                                logger.error("mcp_reconnection_failed",
+                                           error=str(reconnect_error))
+
+                        # Either not a ClosedResourceError, out of retries, or reconnection failed
+                        logger.error("tool_call_failed",
+                                   error=str(tool_error),
+                                   error_type=error_type,
+                                   tool_name=tool_name,
+                                   tool_call_id=tool_call["id"],
+                                   attempt=attempt + 1)
+
+                        error_msg = f"[ERROR] Tool '{tool_name}' failed: {str(tool_error)}"
+                        if "ClosedResourceError" in error_type:
+                            error_msg += " (MCP connection issue. Attempted reconnection.)"
+
+                        outputs.append(
+                            ToolMessage(
+                                content=error_msg,
+                                name=tool_name,
+                                tool_call_id=tool_call["id"],
+                            )
+                        )
+                        break  # Exit retry loop after logging error
+
+        except Exception as e:
+            logger.error("tool_call_processing_failed", error=str(e))
+            # Existing outer exception handling if needed
+
         return Command(update={"messages": outputs}, goto="chat")
 
     async def create_graph(self) -> Optional[CompiledStateGraph]:

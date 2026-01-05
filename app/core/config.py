@@ -207,6 +207,7 @@ class Settings:
         self.EVALUATION_SLEEP_TIME = int(os.getenv("EVALUATION_SLEEP_TIME", "10"))
 
         # MCP Configuration
+        self.MCP_ENABLED = os.getenv("MCP_ENABLED", "true").lower() in ("true", "1", "yes")
         self.MCP_SERVER_PORT = int(os.getenv("MCP_SERVER_PORT", "7001"))
         self.MCP_HOSTNAMES = [
             h.strip() for h in os.getenv("MCP_HOSTNAMES_CSV", "").split(",") if h.strip()

@@ -31,6 +31,7 @@ from app.core.middleware import (
     LoggingContextMiddleware,
     MetricsMiddleware,
 )
+from app.mcp.dependencies import get_mcp_session_manager
 from app.services.database import database_service
 
 # Load environment variables
@@ -43,7 +44,6 @@ langfuse = Langfuse(
     host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
 )
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle application startup and shutdown events."""
@@ -53,8 +53,28 @@ async def lifespan(app: FastAPI):
         version=settings.VERSION,
         api_prefix=settings.API_V1_STR,
     )
+
+    await mcp_dependencies_init()
+
     yield
+
     logger.info("application_shutdown")
+
+
+async def mcp_dependencies_init():
+    # Initialize MCP sessions
+    if settings.MCP_ENABLED and settings.MCP_HOSTNAMES:
+        mcp_manager = get_mcp_session_manager()
+        try:
+            resource = await mcp_manager.initialize()
+            logger.info("mcp_initialized",
+                        tool_count=len(resource.tools),
+                        session_count=len(resource.sessions))
+        except Exception as e:
+            logger.error("mcp_initialization_failed", error=str(e))
+            logger.warning("continuing_without_mcp_tools")
+    else:
+        logger.info("mcp_disabled_or_no_hosts_configured")
 
 
 app = FastAPI(
