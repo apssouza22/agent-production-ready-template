@@ -39,6 +39,7 @@ from app.core.logging import logger
 from app.core.metrics import llm_inference_duration_seconds
 from app.core.prompts import load_system_prompt
 from app.mcp.dependencies import get_mcp_session_manager
+from app.mcp.mcp_utils import handle_mcp_tool_call
 from app.schemas import (
     GraphState,
     Message,
@@ -62,6 +63,7 @@ class LangGraphAgent:
         """Initialize the LangGraph Agent with necessary components."""
         # Use the LLM service with tools bound
         self.tools_by_name = {tool.name: tool for tool in tools}
+        self.mcp_tools_by_name = {}
         self.llm_service = llm_service
         self.llm_service.bind_tools(tools)
         self._connection_pool: Optional[AsyncConnectionPool] = None
@@ -73,11 +75,10 @@ class LangGraphAgent:
             environment=settings.ENVIRONMENT.value,
         )
 
-    async def load_tools(self):
+    async def load_mcp_tools(self):
         """Load tools from persistent MCP sessions and built-in tools."""
         mcp_tools = []
 
-        # Try to load MCP tools from persistent sessions
         if settings.MCP_ENABLED:
             try:
                 mcp_manager = get_mcp_session_manager()
@@ -92,7 +93,7 @@ class LangGraphAgent:
         # Combine MCP tools with built-in tools
         all_tools = mcp_tools + tools
         self.llm_service.bind_tools(all_tools)
-        self.tools_by_name = {tool.name: tool for tool in all_tools}
+        self.mcp_tools_by_name = {tool.name: tool for tool in mcp_tools}
 
         logger.info("tools_loaded", total_count=len(all_tools), mcp_count=len(mcp_tools), builtin_count=len(tools))
 
@@ -265,63 +266,26 @@ class LangGraphAgent:
         try:
             for tool_call in state.messages[-1].tool_calls:
                 tool_name = tool_call["name"]
-                max_retries = 1  # One reconnection attempt
 
-                for attempt in range(max_retries + 1):
-                    try:
-                        tool_result = await self.tools_by_name[tool_name].ainvoke(tool_call["args"])
-                        outputs.append(
-                            ToolMessage(
-                                content=tool_result,
-                                name=tool_name,
-                                tool_call_id=tool_call["id"],
-                            )
+                if tool_name in self.tools_by_name:
+                    tool_result = await self.tools_by_name[tool_name].ainvoke(tool_call["args"])
+                    outputs.append(
+                        ToolMessage(
+                            content=tool_result,
+                            name=tool_name,
+                            tool_call_id=tool_call["id"],
                         )
-                        break  # Success, exit retry loop
-
-                    except Exception as tool_error:
-                        error_type = type(tool_error).__name__
-
-                        # Check if it's a ClosedResourceError and we can retry
-                        if "ClosedResourceError" in error_type and attempt < max_retries:
-                            logger.warning("mcp_connection_closed_retrying",
-                                         tool_name=tool_name,
-                                         attempt=attempt + 1,
-                                         error=str(tool_error))
-
-                            # Attempt to reconnect MCP sessions
-                            try:
-                                mcp_manager = get_mcp_session_manager()
-                                reconnected = await mcp_manager.reconnect()
-                                if reconnected:
-                                    # Reload tools with new sessions
-                                    await self.load_tools()
-                                    logger.info("mcp_reconnected_retrying_tool")
-                                    continue  # Retry the tool call
-                            except Exception as reconnect_error:
-                                logger.error("mcp_reconnection_failed",
-                                           error=str(reconnect_error))
-
-                        # Either not a ClosedResourceError, out of retries, or reconnection failed
-                        logger.error("tool_call_failed",
-                                   error=str(tool_error),
-                                   error_type=error_type,
-                                   tool_name=tool_name,
-                                   tool_call_id=tool_call["id"],
-                                   attempt=attempt + 1)
-
-                        error_msg = f"[ERROR] Tool '{tool_name}' failed: {str(tool_error)}"
-                        if "ClosedResourceError" in error_type:
-                            error_msg += " (MCP connection issue. Attempted reconnection.)"
-
-                        outputs.append(
-                            ToolMessage(
-                                content=error_msg,
-                                name=tool_name,
-                                tool_call_id=tool_call["id"],
-                            )
-                        )
-                        break  # Exit retry loop after logging error
+                    )
+                elif tool_name in self.mcp_tools_by_name:
+                    tool_fn = self.mcp_tools_by_name[tool_name]
+                    tool_message = await handle_mcp_tool_call(
+                        tool_fn=tool_fn,
+                        tool_call=tool_call,
+                        tool_name=tool_name,
+                        max_retries=1,
+                        on_reconnect=self.load_mcp_tools,
+                    )
+                    outputs.append(tool_message)
 
         except Exception as e:
             logger.error("tool_call_processing_failed", error=str(e))
@@ -337,7 +301,7 @@ class LangGraphAgent:
         """
         if self._graph is None:
             try:
-                await self.load_tools()
+                await self.load_mcp_tools()
                 graph_builder = StateGraph(GraphState)
                 graph_builder.add_node("chat", self._chat, ends=["tool_call", END])
                 graph_builder.add_node("tool_call", self._tool_call, ends=["chat"])

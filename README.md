@@ -22,6 +22,10 @@ A production-ready FastAPI template for building AI agent applications with Lang
   - Multiple LLM model support (GPT-4o, GPT-4o-mini, GPT-5, GPT-5-mini, GPT-5-nano)
   - Streaming responses for real-time chat interactions
   - Tool calling and function execution capabilities
+  - **Model Context Protocol (MCP)** integration for extensible tool ecosystem
+    - Persistent MCP session management with automatic reconnection
+    - Server and client support for building custom MCP tools
+    - Graceful degradation when MCP servers are unavailable
 
 - **Security**
 
@@ -236,6 +240,11 @@ LONG_TERM_MEMORY_COLLECTION_NAME=agent_memories
 LONG_TERM_MEMORY_MODEL=gpt-4o-mini
 LONG_TERM_MEMORY_EMBEDDER_MODEL=text-embedding-3-small
 
+# MCP Configuration
+MCP_ENABLED=true
+MCP_SERVER_PORT=7001
+MCP_HOSTNAMES_CSV=localhost:7001
+
 # Observability
 LANGFUSE_PUBLIC_KEY=your_public_key
 LANGFUSE_SECRET_KEY=your_secret_key
@@ -296,6 +305,66 @@ The LLM service provides robust, production-ready language model interactions wi
 - **Max Attempts**: 3
 - **Wait Strategy**: Exponential backoff (1s, 2s, 4s)
 - **Logging**: All retry attempts are logged with context
+
+## 🔌 Model Context Protocol (MCP)
+
+The application includes comprehensive support for the Model Context Protocol (MCP), enabling extensible tool integration and custom server implementations.
+
+### Features
+
+- **Persistent Session Management**: MCP sessions are managed at application lifecycle level
+- **Automatic Reconnection**: Built-in retry logic for handling connection failures
+- **Graceful Degradation**: Application continues with built-in tools if MCP is unavailable
+- **Server & Client Support**: Both MCP server and client implementations included
+- **Multi-Server Support**: Connect to multiple MCP servers simultaneously
+- **Type-Safe Integration**: Full LangChain adapter integration for seamless tool usage
+
+### MCP Server
+
+The template includes a sample MCP server (`app/mcp/server.py`) with example tools:
+
+```python
+from mcp.server.fastmcp import FastMCP
+
+mcpServer = FastMCP("MCP Server", port=7001)
+
+@mcpServer.tool()
+def add(a: int, b: int) -> int:
+    """Add two numbers"""
+    return a + b
+
+@mcpServer.resource("greeting://{name}")
+def get_greeting(name: str) -> str:
+    """Get a personalized greeting"""
+    return f"Hello, {name}!"
+```
+
+Start the MCP server:
+
+```bash
+python app/mcp/server.py
+```
+
+### MCP Client
+
+The application automatically connects to configured MCP servers and loads their tools:
+
+
+### Running with MCP
+
+1. **Start MCP Server** (in one terminal):
+```bash
+python app/mcp/server.py
+```
+
+2. **Start Application** (in another terminal):
+```bash
+make dev
+```
+
+3. **Verify Connection**:
+   - Check logs for `mcp_initialized` with tool counts
+   - Use chat endpoint to invoke MCP tools
 
 ## 📝 Advanced Logging
 

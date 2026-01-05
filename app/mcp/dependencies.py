@@ -2,13 +2,22 @@ from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
 
+from langchain_core.tools import StructuredTool
 from langchain_mcp_adapters.tools import load_mcp_tools
 from mcp import ClientSession
 from mcp.client.sse import sse_client
+from pydantic import BaseModel
 
 from app.core.config import settings
 from app.core.logging import logger
-from app.mcp.models import Resource
+
+
+class Resource(BaseModel):
+  tools: list[StructuredTool]
+  sessions: list[ClientSession]
+
+  class Config:
+    arbitrary_types_allowed = True
 
 
 @asynccontextmanager
