@@ -8,6 +8,7 @@ from typing import (
     Dict,
 )
 
+import uvicorn
 from dotenv import load_dotenv
 from fastapi import (
     FastAPI,
@@ -163,3 +164,7 @@ async def health_check(request: Request) -> Dict[str, Any]:
     status_code = status.HTTP_200_OK if db_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
 
     return JSONResponse(content=response, status_code=status_code)
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

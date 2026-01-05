@@ -38,6 +38,7 @@ from app.core.langgraph.tools import tools
 from app.core.logging import logger
 from app.core.metrics import llm_inference_duration_seconds
 from app.core.prompts import load_system_prompt
+from app.mcp.dependencies import get_mcp_dependencies
 from app.schemas import (
     GraphState,
     Message,
@@ -60,9 +61,9 @@ class LangGraphAgent:
     def __init__(self):
         """Initialize the LangGraph Agent with necessary components."""
         # Use the LLM service with tools bound
+        self.tools_by_name = {tool.name: tool for tool in tools}
         self.llm_service = llm_service
         self.llm_service.bind_tools(tools)
-        self.tools_by_name = {tool.name: tool for tool in tools}
         self._connection_pool: Optional[AsyncConnectionPool] = None
         self._graph: Optional[CompiledStateGraph] = None
         self.memory: Optional[AsyncMemory] = None
@@ -71,6 +72,13 @@ class LangGraphAgent:
             model=settings.DEFAULT_LLM_MODEL,
             environment=settings.ENVIRONMENT.value,
         )
+
+    async def load_tools(self):
+        async with get_mcp_dependencies() as resource:
+            logger.info("mcp_tools_loaded", tool_count=len(resource.tools))
+            all_tools = resource.tools + tools
+            self.llm_service.bind_tools(tools)
+            self.tools_by_name = {tool.name: tool for tool in all_tools}
 
     async def _long_term_memory(self) -> AsyncMemory:
         """Initialize the long term memory."""
@@ -257,6 +265,7 @@ class LangGraphAgent:
         """
         if self._graph is None:
             try:
+                await self.load_tools()
                 graph_builder = StateGraph(GraphState)
                 graph_builder.add_node("chat", self._chat, ends=["tool_call", END])
                 graph_builder.add_node("tool_call", self._tool_call, ends=["chat"])

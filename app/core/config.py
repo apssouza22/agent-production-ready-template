@@ -206,6 +206,12 @@ class Settings:
         self.EVALUATION_API_KEY = os.getenv("EVALUATION_API_KEY", self.OPENAI_API_KEY)
         self.EVALUATION_SLEEP_TIME = int(os.getenv("EVALUATION_SLEEP_TIME", "10"))
 
+        # MCP Configuration
+        self.MCP_SERVER_PORT = int(os.getenv("MCP_SERVER_PORT", "7001"))
+        self.MCP_HOSTNAMES = [
+            h.strip() for h in os.getenv("MCP_HOSTNAMES_CSV", "").split(",") if h.strip()
+        ]
+
         # Apply environment-specific settings
         self.apply_environment_settings()
 
