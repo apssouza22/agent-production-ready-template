@@ -44,6 +44,16 @@ langfuse = Langfuse(
     host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
 )
 
+
+async def mcp_dependencies_cleanup():
+    if settings.MCP_ENABLED and settings.MCP_HOSTNAMES:
+        mcp_manager = get_mcp_session_manager()
+        await mcp_manager.cleanup()
+        logger.info("mcp_cleaned_up")
+    else:
+        logger.info("mcp_cleanup_skipped")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle application startup and shutdown events."""
@@ -58,18 +68,16 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    await mcp_dependencies_cleanup()
     logger.info("application_shutdown")
 
 
 async def mcp_dependencies_init():
-    # Initialize MCP sessions
     if settings.MCP_ENABLED and settings.MCP_HOSTNAMES:
         mcp_manager = get_mcp_session_manager()
         try:
             resource = await mcp_manager.initialize()
-            logger.info("mcp_initialized",
-                        tool_count=len(resource.tools),
-                        session_count=len(resource.sessions))
+            logger.info("mcp_initialized", tool_count=len(resource.tools), session_count=len(resource.sessions))
         except Exception as e:
             logger.error("mcp_initialization_failed", error=str(e))
             logger.warning("continuing_without_mcp_tools")

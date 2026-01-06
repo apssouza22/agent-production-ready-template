@@ -243,7 +243,7 @@ LONG_TERM_MEMORY_EMBEDDER_MODEL=text-embedding-3-small
 # MCP Configuration
 MCP_ENABLED=true
 MCP_SERVER_PORT=7001
-MCP_HOSTNAMES_CSV=localhost:7001
+MCP_HOSTNAMES_CSV=http://localhost:7001
 
 # Observability
 LANGFUSE_PUBLIC_KEY=your_public_key
@@ -321,24 +321,7 @@ The application includes comprehensive support for the Model Context Protocol (M
 
 ### MCP Server
 
-The template includes a sample MCP server (`app/mcp/server.py`) with example tools:
-
-```python
-from mcp.server.fastmcp import FastMCP
-
-mcpServer = FastMCP("MCP Server", port=7001)
-
-@mcpServer.tool()
-def add(a: int, b: int) -> int:
-    """Add two numbers"""
-    return a + b
-
-@mcpServer.resource("greeting://{name}")
-def get_greeting(name: str) -> str:
-    """Get a personalized greeting"""
-    return f"Hello, {name}!"
-```
-
+The template includes a sample MCP server (`app/mcp/server.py`) with example tools
 Start the MCP server:
 
 ```bash
